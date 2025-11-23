@@ -1,0 +1,14 @@
+{
+  "name": "mock-portal-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "cd nextjs-scaffold && npm run dev",
+    "build": "cd nextjs-scaffold && npm run build",
+    "start": "cd nextjs-scaffold && npm start",
+    "lint": "cd nextjs-scaffold && npm run lint",
+    "install:all": "cd nextjs-scaffold && npm install"
+  },
+  "description": "Root package.json for Mock Exam Portal - delegates to nextjs-scaffold"
+}
+

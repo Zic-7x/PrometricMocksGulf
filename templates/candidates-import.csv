@@ -1,0 +1,6 @@
+email,full_name,profession,medical_field,health_authority,payment_status
+candidate1@example.com,John Doe,PHARMACIST,CLINICAL_PHARMACY,DHA,unpaid
+candidate2@example.com,Jane Smith,PHARMACIST,CLINICAL_PHARMACY,DHA,paid
+candidate3@example.com,Ahmed Ali,NURSE,EMERGENCY_MEDICINE,HAAD,unpaid
+candidate4@example.com,Sara Khan,PHARMACIST,CLINICAL_PHARMACY,MOH_QATAR,paid
+
