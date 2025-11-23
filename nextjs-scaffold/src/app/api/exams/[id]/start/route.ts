@@ -21,24 +21,28 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const userId = user.id
+
     // Get user profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', user.id)
+      .eq('id', userId as any)
       .single()
 
     if (profileError || !profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
+    const profileData = profile as any
+
     // Check if candidate
-    if (profile.role !== 'candidate') {
+    if (profileData.role !== 'candidate') {
       return NextResponse.json({ error: 'Only candidates can start exams' }, { status: 403 })
     }
 
     // Check payment status
-    if (profile.payment_status !== 'paid') {
+    if (profileData.payment_status !== 'paid') {
       return NextResponse.json(
         { error: 'Payment required. Please contact admin.' },
         { status: 403 }
@@ -46,7 +50,7 @@ export async function POST(
     }
 
     // Check exam access
-    if (!profile.exam_access_enabled || profile.status !== 'active') {
+    if (!profileData.exam_access_enabled || profileData.status !== 'active') {
       return NextResponse.json(
         { error: 'Exam access is disabled' },
         { status: 403 }
@@ -64,17 +68,19 @@ export async function POST(
         template:exam_templates(*)
       `
       )
-      .eq('id', examInstanceId)
+      .eq('id', examInstanceId as any)
       .single()
 
     if (examError || !examInstance) {
       return NextResponse.json({ error: 'Exam not found' }, { status: 404 })
     }
 
+    const examInstanceData = examInstance as any
+
     // Check availability window
     const now = new Date()
-    const availableFrom = new Date(examInstance.available_from)
-    const availableUntil = new Date(examInstance.available_until)
+    const availableFrom = new Date(examInstanceData.available_from)
+    const availableUntil = new Date(examInstanceData.available_until)
 
     if (now < availableFrom || now > availableUntil) {
       return NextResponse.json(
@@ -87,20 +93,21 @@ export async function POST(
     const { data: existingAttempt } = await supabase
       .from('attempts')
       .select('id')
-      .eq('exam_instance_id', examInstanceId)
-      .eq('candidate_id', user.id)
-      .eq('status', 'in_progress')
+      .eq('exam_instance_id', examInstanceId as any)
+      .eq('candidate_id', user.id as any)
+      .eq('status', 'in_progress' as any)
       .single()
 
     if (existingAttempt) {
+      const attemptData = existingAttempt as any
       return NextResponse.json(
-        { error: 'You already have an in-progress attempt', attempt_id: existingAttempt.id },
+        { error: 'You already have an in-progress attempt', attempt_id: attemptData.id },
         { status: 400 }
       )
     }
 
     // Get template
-    const template = examInstance.template as any
+    const template = examInstanceData.template as any
 
     // Select questions based on template rules
     const questionSelectionRules = template.question_selection_rules as Array<{
@@ -115,17 +122,17 @@ export async function POST(
       let query = supabase
         .from('question_bank')
         .select('id')
-        .eq('profession_id', profile.profession_id)
-        .eq('medical_field_id', profile.medical_field_id)
-        .eq('health_authority_id', profile.health_authority_id)
-        .eq('status', 'active')
+        .eq('profession_id', profileData.profession_id as any)
+        .eq('medical_field_id', profileData.medical_field_id as any)
+        .eq('health_authority_id', profileData.health_authority_id as any)
+        .eq('status', 'active' as any)
         .is('deleted_at', null)
 
       if (rule.topic) {
-        query = query.eq('topic', rule.topic)
+        query = query.eq('topic', rule.topic as any)
       }
       if (rule.difficulty) {
-        query = query.eq('difficulty', rule.difficulty)
+        query = query.eq('difficulty', rule.difficulty as any)
       }
 
       const { data: questions, error: questionsError } = await query
@@ -138,8 +145,9 @@ export async function POST(
       }
 
       // Randomly select questions
-      const shuffled = questions.sort(() => Math.random() - 0.5)
-      const selected = shuffled.slice(0, rule.count).map((q) => q.id)
+      const questionsData = questions as any[]
+      const shuffled = questionsData.sort(() => Math.random() - 0.5)
+      const selected = shuffled.slice(0, rule.count).map((q: any) => q.id)
       selectedQuestionIds.push(...selected)
     }
 
@@ -157,7 +165,7 @@ export async function POST(
         selected_question_ids: selectedQuestionIds,
         status: 'in_progress',
         started_at: new Date().toISOString(),
-      })
+      } as any)
       .select()
       .single()
 
@@ -172,7 +180,7 @@ export async function POST(
     const { data: questions, error: questionsError } = await supabase
       .from('question_bank')
       .select('*')
-      .in('id', selectedQuestionIds)
+      .in('id', selectedQuestionIds as any)
 
     if (questionsError) {
       return NextResponse.json(
@@ -182,9 +190,10 @@ export async function POST(
     }
 
     // Shuffle choices if configured (for display only, not stored)
-    let questionsToReturn = questions
+    const questionsData = (questions || []) as any[]
+    let questionsToReturn = questionsData
     if (template.shuffle_choices) {
-      questionsToReturn = questions.map((q) => {
+      questionsToReturn = questionsData.map((q) => {
         if (q.choices_json && typeof q.choices_json === 'object') {
           const entries = Object.entries(q.choices_json)
           entries.sort(() => Math.random() - 0.5)
@@ -194,8 +203,10 @@ export async function POST(
       })
     }
 
+    const attemptData = attempt as any
+
     return NextResponse.json({
-      attempt_id: attempt.id,
+      attempt_id: attemptData.id,
       questions: questionsToReturn,
       time_limit_seconds: template.time_limit_seconds,
       per_question_time_limit_seconds: template.per_question_time_limit_seconds,
